@@ -6,10 +6,12 @@ FROM nvidia/cuda:12.8.1-base-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     NVIDIA_DRIVER_CAPABILITIES=all \
-    NVIDIA_VISIBLE_DEVICES=all \
     LANG=C.UTF-8 \
     PATH=/opt/node/bin:/opt/cr/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# NVIDIA_VISIBLE_DEVICES is left to RunPod (-3). With "all" baked in (-2), cuInit gave CUDA_ERROR_UNKNOWN on the 5090 hosts
+# 18.10 and NVENC could not start; that env is the suspected cause, not proven (pod_job.py probes cuInit to settle it).
+# NVIDIA_DRIVER_CAPABILITIES=all stays (graphics for EGL/Vulkan, video for NVENC).
 # Chrome Headless Shell libraries (Remotion's Linux list for Ubuntu 24.04), GL/EGL/glvnd for --gl=angle-egl, fonts, python
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl xz-utils procps rsync python3 python3-venv libsndfile1 \
@@ -69,7 +71,7 @@ RUN curl -fsSL --retry 3 -o /usr/local/bin/runpodctl https://github.com/runpod/r
 COPY smoke/ /opt/cr/smoke/
 RUN ln -s /opt/remotion/node_modules /opt/cr/smoke/node_modules
 
-ARG TAG=4.0.528-2
+ARG TAG=4.0.528-3
 RUN printf '{"image":"cr-remotion","tag":"%s","remotion":"4.0.528","node":"%s","ffmpeg":"8.1.3 BtbN autobuild-2026-09-30","lock_sha256":"%s","runpodctl":"3.0.1","croc":"11.5.4"}\n' \
       "$TAG" "$NODE_V" "$(cat /opt/remotion/LOCK_SHA256)" > /opt/cr/image.json && cat /opt/cr/image.json
 
