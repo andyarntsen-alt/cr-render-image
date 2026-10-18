@@ -1,0 +1,44 @@
+name: remotion
+on:
+  push:
+    branches: [main]
+    paths: ["remotion/**", .github/workflows/remotion.yml]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: image tag
+        default: 4.0.528-1
+permissions:
+  contents: read
+  packages: write
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/cr-remotion
+  TAG: ${{ inputs.tag || '4.0.528-1' }}
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: remotion
+          platforms: linux/amd64
+          load: true
+          build-args: TAG=${{ env.TAG }}
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
+      - name: smoke test
+        run: |
+          I=$IMAGE:$TAG
+          docker run --rm $I bash -c 'cat /opt/cr/image.json && ffmpeg -hide_banner -encoders | grep -E "libx264|prores_ks|h264_nvenc|hevc_nvenc" && ffprobe -version | head -1 && node --version && python -c "import numpy, scipy, cv2, soundfile, pyloudnorm, soxr, mido, matplotlib; print(\"PY_OK\")" && runpodctl --version && croc --version && cd /opt/cr/smoke && node smoke.mjs /tmp/smoke swangle'
+          docker image ls $I
+      - name: push
+        run: docker push $IMAGE:$TAG
+      - name: size
+        run: docker buildx imagetools inspect $IMAGE:$TAG

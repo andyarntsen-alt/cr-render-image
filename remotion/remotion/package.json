@@ -1,0 +1,26 @@
+{
+  "name": "casereplay-ep05-graphics",
+  "private": true,
+  "type": "module",
+  "description": "CaseReplay ep05 graphics system (Remotion, 1920x1080, 25 fps). Render with: node render.mjs <Comp> --props <json|file> --out <file.mov>",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "node render.mjs",
+    "lint": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.528",
+    "@remotion/cli": "4.0.528",
+    "@remotion/renderer": "4.0.528",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.528"
+  },
+  "devDependencies": {
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@types/react": "19.2.2",
+    "topojson-client": "3.1.0",
+    "typescript": "5.9.3",
+    "world-atlas": "2.0.2"
+  }
+}
