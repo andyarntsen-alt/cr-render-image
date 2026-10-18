@@ -1,7 +1,7 @@
 # CaseReplay Remotion + ffmpeg render image for GPU pods (ep08: graphics with render.mjs, edit with build.py).
 # Everything a render needs is baked in, so a pod never runs apt, pip, npm or a browser download at boot (FEILREGISTER D14).
 # No secrets, no project code, no media: Node, Remotion's npm packages (from ep08/graphics/package-lock.json), Chrome Headless
-# Shell, ffmpeg 9.0.2 static (BtbN, GPL, NVENC), Python packages for build.py, runpodctl and croc.
+# Shell, ffmpeg 8.1.3 static (BtbN, GPL, NVENC), Python packages for build.py, runpodctl and croc.
 FROM nvidia/cuda:12.8.1-base-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -26,9 +26,11 @@ RUN mkdir -p /usr/share/glvnd/egl_vendor.d /usr/share/vulkan/icd.d /etc/vulkan/i
  && printf '{"file_format_version":"1.0.0","ICD":{"library_path":"libGLX_nvidia.so.0","api_version":"1.3.0"}}\n' > /usr/share/vulkan/icd.d/nvidia_icd.json \
  && cp /usr/share/vulkan/icd.d/nvidia_icd.json /etc/vulkan/icd.d/nvidia_icd.json
 
-# ffmpeg/ffprobe 9.0.2 (same version as the Mac), static GPL build with libx264, prores_ks, h264_nvenc/hevc_nvenc
-ARG FF_URL=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n9.0.2-17-g2a571b6068-linux64-gpl-9.0.tar.xz
-ARG FF_SHA=68ee646831adaae2495618346f3bba94ff207ff83bbd34d643e7004730d66269
+# ffmpeg/ffprobe 8.1.3, static GPL build with libx264, prores_ks, h264_nvenc/hevc_nvenc. Not 9.0 (the Mac has 9.0.2): BtbN builds
+# 9.x against nv-codec-headers 13.1, and RunPod hosts run driver 580, which refused it ("Driver does not support the required
+# nvenc API version", 4090 and 5090 pods 18.10). BtbN builds <= 8.1 with the sdk/13.0 headers, which driver 570+ supports.
+ARG FF_URL=https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz
+ARG FF_SHA=97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79
 RUN curl -fsSL --retry 3 -o /tmp/ff.tar.xz "$FF_URL" && echo "$FF_SHA  /tmp/ff.tar.xz" | sha256sum -c - \
  && tar xJf /tmp/ff.tar.xz -C /tmp && cp /tmp/ffmpeg-*/bin/ffmpeg /tmp/ffmpeg-*/bin/ffprobe /usr/local/bin/ && rm -rf /tmp/ff* \
  && ffmpeg -hide_banner -encoders | grep -E "libx264|prores_ks|h264_nvenc|hevc_nvenc"
@@ -67,12 +69,12 @@ RUN curl -fsSL --retry 3 -o /usr/local/bin/runpodctl https://github.com/runpod/r
 COPY smoke/ /opt/cr/smoke/
 RUN ln -s /opt/remotion/node_modules /opt/cr/smoke/node_modules
 
-ARG TAG=4.0.528-1
-RUN printf '{"image":"cr-remotion","tag":"%s","remotion":"4.0.528","node":"%s","ffmpeg":"9.0.2 BtbN autobuild-2026-09-30","lock_sha256":"%s","runpodctl":"3.0.1","croc":"11.5.4"}\n' \
+ARG TAG=4.0.528-2
+RUN printf '{"image":"cr-remotion","tag":"%s","remotion":"4.0.528","node":"%s","ffmpeg":"8.1.3 BtbN autobuild-2026-09-30","lock_sha256":"%s","runpodctl":"3.0.1","croc":"11.5.4"}\n' \
       "$TAG" "$NODE_V" "$(cat /opt/remotion/LOCK_SHA256)" > /opt/cr/image.json && cat /opt/cr/image.json
 
 LABEL org.opencontainers.image.title="cr-remotion" \
-      org.opencontainers.image.description="Remotion 4.0.528 + Chrome Headless Shell, Node 24, ffmpeg 9.0.2 (NVENC), Python for build.py, runpodctl, croc"
+      org.opencontainers.image.description="Remotion 4.0.528 + Chrome Headless Shell, Node 24, ffmpeg 8.1.3 (NVENC), Python for build.py, runpodctl, croc"
 
 WORKDIR /workspace
 CMD ["sleep", "infinity"]
